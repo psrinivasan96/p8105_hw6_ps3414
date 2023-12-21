@@ -1,7 +1,7 @@
 ---
 title: "Homework 6"
-output: html_document
-date: "2023-12-21"
+author: Pavithra Srinivasan
+output: github_document
 ---
 
 
@@ -107,7 +107,7 @@ model_results |>
 
 ### Problem 2
 
-Importing and reading in the data:
+Importing and reading in the data using code given:
 
 ```{r}
 weather_df = 
@@ -123,20 +123,20 @@ weather_df =
   select(name, id, everything())
 ```
 
-Build a regression model for `tmax`
+##### Build a regression model: 
 
 ```{r}
 model_tmax <- lm(tmax ~ tmin + prcp, data = weather_df)
 summary(model_tmax)
 ```
 
-Bootstrap analysis
+##### Bootstrap analysis:
 
 ```{r}
 set.seed(123)
 ```
 
-Writing a function to generate 5000 bootstraps samples
+##### Writing a function to generate 5000 bootstraps samples
 
 ```{r}
 boot_sample = function(df) {
@@ -144,7 +144,7 @@ boot_sample = function(df) {
 }
 ```
 
-5000 bootstraps samples:
+##### 5000 bootstraps samples:
 
 ```{r}
 boot_straps = 
@@ -156,10 +156,10 @@ boot_straps =
 boot_straps
 ```
 
-Combine all the bootstraps results
+##### Combine all the bootstraps results
 
 ```{r}
-bootstrap_results <- 
+combined_results <- 
   boot_straps |> 
   mutate(
     models = map(strap_sample, ~lm(tmax ~ tmin + prcp, data = .x) ),
@@ -168,18 +168,18 @@ bootstrap_results <-
   unnest(results) 
 ```
 
-Compute the R-Squared
+##### Compute the R-Squared
 
 ```{r}
 r_squared <- 
-  bootstrap_results |>
+  combined_results |>
   select(r.squared, strap_number)
 ```
 
-Generating estimates
+##### Generating estimates
 
 ```{r warning=FALSE}
-bootstrap_results2 = 
+combined_results2 = 
   boot_straps |> 
   mutate(
     models = map(strap_sample, ~lm(tmax ~ tmin + prcp, data = .x) ),
@@ -189,17 +189,17 @@ bootstrap_results2 =
 
 ```
 
-Log of the product of beta estimates
+##### Log of the product of beta estimates
 
 ```{r}
 log_betas <-  
-  bootstrap_results2 |>
+  combined_results2 |>
   group_by(strap_number) |>
   summarise(log_betas = log(estimate[2] * estimate[3])) |>
   select(log_betas, strap_number)
 ```
 
-Density Plot of R-squared
+##### Density Plot of R-squared
 
 ```{r}
 r_squared_sd <-
@@ -220,7 +220,7 @@ r_squared |>
 The density curve of R-Squared $\hat r^2$ is skewed to the left. The mean is `r round(r_squared_mean,4)` and standard deviation is`r round(r_squared_sd,4)`.
 
 
-Density plot of the product of beta estimates
+##### Density plot of the product of beta estimates
 
 ```{r}
   beta_sd <- 
@@ -241,7 +241,7 @@ log_betas |>
 The density curve of the the product of two beta estimates is left-skewed. The mean is `r round(betas_mean,4)`, and the standard deviation is `r round(beta_sd,4)`.
 
 
-95% CI of the R-Squared
+##### 95% CI of the R-Squared
 ```{r}
 CI_interval <-
   r_squared |>
@@ -255,7 +255,7 @@ CI_result_upper <- CI_interval |> pull(ci_upper)
 The 95% Confidence Interval of the R-squared estimates $\hat r^2$ is (`r round(CI_result_lower,4)`,`r round(CI_result_upper,4)`).
 
 
-95% CI of log of the product of beta estimates
+##### 95% CI of log of the product of beta estimates
 ```{r}
 CI_interval2 <-
   log_betas |>
@@ -271,7 +271,7 @@ The 95% Confidence Interval of the product of beta estimates $\log(\hat\beta_1\t
 
 ### Problem 3
 
-Importing and Cleaning the Data 
+##### Importing and Cleaning the Data 
 
 ```{r}
 birth_weight = read_csv("./data/birthweight.csv")
@@ -281,7 +281,7 @@ birthweight_clean = birth_weight|>
   mutate(malform = as.factor(malform))|>
   mutate(babysex = as.factor(babysex))
 
- birthweight_fit = birthweight_clean|>
+ birthweight_model = birthweight_clean|>
    mutate(mrace = case_match(mrace,
                               "1" ~ "White",
                               "2" ~ "Black",
@@ -293,24 +293,23 @@ birthweight_clean = birth_weight|>
                                "1" ~ "present"))
 ```
 
-Proposed Regression Line
+##### Proposed Regression Line
 
-The predictors I chose were: `fincome`, `malform`, `mrace`, and `smoken`. Income can act as a huge barrier and can influence the surroundings of those who are pregnant and the quality of nutrition. Additioanlly, this can also tell us the birth weight of the infant in which the mother's drug habits like cigarette smoking is tested. Other confounding variables were chosen such as race to see if these factors gave an affect on birth weight.
+The predictors I chose were: `fincome`, `malform`, `mrace`, and `smoken`. Income can act as a huge barrier and can influence the surroundings of those who are pregnant and the quality of nutrition. Additionally, this can also tell us the birth weight of the infant in which the mother's drug habits like cigarette smoking is tested. Other confounding variables were chosen such as race to see if these factors gave an affect on birth weight.
 
 ```{r}
-
 fit_regression = lm(bwt ~ fincome + malform + mrace + smoken,
-           data = birthweight_fit)
+           data = birthweight_model)
 ```
 
-Plot of Residuals Against Fitted Values
+##### Plot of Residuals Against Fitted Values
 
 ```{r}
-birthweight_fit = birthweight_fit|>
+birthweight_model = birthweight_model|>
   add_residuals(fit_regression, var = "residuals")|>
-  add_predictions(fit_regression, var = "fitted")
+  add_predictions(fit_regression, var = "fit")
 
-ggplot(birthweight_fit, aes(x= fitted, y = residuals))+
+ggplot(birthweight_model, aes(x= fit, y = residuals))+
   geom_point()+
   geom_hline(yintercept = 0, linetype = "dashed", color = "blue") +
   labs(title = "Residuals vs Fitted Values",
@@ -324,7 +323,7 @@ Observation: Most of the data points gathered around where the residual was 0. H
 ##### Cross Validated Prediction Error to Compare: 
 
 Predictors for fit model 1: birth length and gestational age
-Predictors for fit model 2: head circumference, length and sex
+Predictors for fit model 2: head circumference, length and sex (combinations of them too)
 
 ```{r}
 fit_validation1 = lm(bwt ~ blength + gaweeks, data = birth_weight)
@@ -352,7 +351,7 @@ validation_df =
 ```
 
 
-Plotting the Cross Validation Predictor Error Model
+##### Plotting the Cross Validation Predictor Error Model
 
 ```{r}
 validation_df |> 
