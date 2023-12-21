@@ -214,7 +214,7 @@ r_squared_mean <-
 
 r_squared |>
   ggplot(aes(x = r.squared)) + geom_density()+
-  labs(title = "Distribution of R-squared")
+  labs(title = "Distribution of R-squared Estimates")
 ```
 
 The density curve of R-Squared $\hat r^2$ is skewed to the left. The mean is `r round(r_squared_mean,4)` and standard deviation is`r round(r_squared_sd,4)`.
@@ -235,7 +235,7 @@ Density plot of the product of beta estimates
 
 log_betas |>
   ggplot(aes(x = log_betas)) + geom_density() +
-  labs(title = "Distribution of log(Beta1 * Beta2)")
+  labs(title = "Distribution of Beta Estimates")
 ```
 
 The density curve of the the product of two beta estimates is left-skewed. The mean is `r round(betas_mean,4)`, and the standard deviation is `r round(beta_sd,4)`.
