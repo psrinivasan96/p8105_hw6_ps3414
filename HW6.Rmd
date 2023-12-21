@@ -1,0 +1,33 @@
+---
+title: "Homework 6"
+output: html_document
+date: "2023-12-21"
+---
+
+
+```{r}
+library(tidyverse)
+library(viridis)
+library(modelr)
+library(ggplot2)
+library(purrr)
+
+knitr::opts_chunk$set(
+	echo = TRUE,
+	warning = FALSE,
+	fig.width = 8, 
+  fig.height = 6,
+  out.width = "90%"
+)
+
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
+
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+```
+```
