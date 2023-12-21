@@ -321,5 +321,65 @@ ggplot(birthweight_fit, aes(x= fitted, y = residuals))+
 Observation: Most of the data points gathered around where the residual was 0. However, there are some outliers that should be takes note of because of the potential effects it might introduce to statistical analysis being conducted. Overall, there were not significant trends observed between the residuals and the values. 
 
 
+##### Cross Validated Prediction Error to Compare: 
+
+Predictors for fit model 1: birth length and gestational age
+Predictors for fit model 2: head circumference, length and sex
+
+```{r}
+fit_validation1 = lm(bwt ~ blength + gaweeks, data = birth_weight)
+fit_validation2 = lm(bwt ~ bhead + blength + babysex + bhead*blength + bhead*babysex + blength*babysex, data = birthweight_clean)
+```
+
+```{r}
+validation_df =
+  crossv_mc(birthweight_clean, 100) |> 
+  mutate(
+    train = map(train, as_tibble),
+    test = map(test, as_tibble))
+
+validation_df = 
+  validation_df |> 
+  mutate(
+    fit_regression  = map(train, \(df) lm(bwt ~ fincome + malform + mrace + smoken,
+           data = df)),
+    fit_validation1  = map(train, \(df) lm(bwt ~ blength + gaweeks, data = df)),
+    fit_validation2  = map(train, \(df) lm(bwt ~ bhead + blength + babysex + bhead*blength + bhead*babysex + blength*babysex, data = df))) |> 
+  mutate(
+    rmse_fit_regression = map2_dbl(fit_regression, test, \(mod, df) rmse(model = mod, data = df)),
+    rmse_fit_validation1 = map2_dbl(fit_validation1, test, \(mod, df) rmse(model = mod, data = df)),
+    rmse_fit_validation2 = map2_dbl(fit_validation2, test, \(mod, df) rmse(model = mod, data = df)))
+```
+
+
+Plotting the Cross Validation Predictor Error Model
+
+```{r}
+validation_df |> 
+  select(starts_with("rmse")) |> 
+  pivot_longer(
+    everything(),
+    names_to = "model", 
+    values_to = "rmse",
+    names_prefix = "rmse_") |> 
+  mutate(model = fct_inorder(model)) |> 
+  ggplot(aes(x = model, y = rmse)) + geom_violin()+
+  labs(title = "Cross Validation Prediction for Comparison",
+        x = "Model",
+       y = "RMSE")
+```
+
+Based on the RMSE v.s Model graph, we can see that fit model 2 which includes head circumference, length, sex had the lowest RMSE. This may be the optimal choice in comparison to the regression. It should also be noted Model 2 had more variables to be addressed compared to the other ones. 
+
+
+
+
+
+
+
+
+
+
+
 
 
