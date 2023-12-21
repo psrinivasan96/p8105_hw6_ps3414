@@ -105,8 +105,171 @@ model_results |>
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ```
 
+### Problem 2
+
+Importing and reading in the data:
+
+```{r}
+weather_df = 
+  rnoaa::meteo_pull_monitors(
+    c("USW00094728"),
+    var = c("PRCP", "TMIN", "TMAX"), 
+    date_min = "2022-01-01",
+    date_max = "2022-12-31") |>
+  mutate(
+    name = recode(id, USW00094728 = "CentralPark_NY"),
+    tmin = tmin / 10,
+    tmax = tmax / 10) |>
+  select(name, id, everything())
+```
+
+Build a regression model for `tmax`
+
+```{r}
+model_tmax <- lm(tmax ~ tmin + prcp, data = weather_df)
+summary(model_tmax)
+```
+
+Bootstrap analysis
+
+```{r}
+set.seed(123)
+```
+
+Writing a function to generate 5000 bootstraps samples
+
+```{r}
+boot_sample = function(df) {
+  sample_frac(df, replace = TRUE)
+}
+```
+
+5000 bootstraps samples:
+
+```{r}
+boot_straps = 
+  tibble(strap_number = 1:5000) |> 
+  mutate(
+    strap_sample = map(strap_number, \(i) boot_sample(df = weather_df))
+  )
+
+boot_straps
+```
+
+Combine all the bootstraps results
+
+```{r}
+bootstrap_results <- 
+  boot_straps |> 
+  mutate(
+    models = map(strap_sample, ~lm(tmax ~ tmin + prcp, data = .x) ),
+    results = map(models, broom::glance)) |>
+  select(-strap_sample, -models) |>
+  unnest(results) 
+```
+
+Compute the R-Squared
+
+```{r}
+r_squared <- 
+  bootstrap_results |>
+  select(r.squared, strap_number)
+```
+
+Generating estimates
+
+```{r warning=FALSE}
+bootstrap_results2 = 
+  boot_straps |> 
+  mutate(
+    models = map(strap_sample, ~lm(tmax ~ tmin + prcp, data = .x) ),
+    results = map(models, broom::tidy)) |> 
+  select(-strap_sample, -models) |> 
+  unnest(results) 
+
+```
+
+Log of the product of beta estimates
+
+```{r}
+log_betas <-  
+  bootstrap_results2 |>
+  group_by(strap_number) |>
+  summarise(log_betas = log(estimate[2] * estimate[3])) |>
+  select(log_betas, strap_number)
+```
+
+Density Plot of R-squared
+
+```{r}
+r_squared_sd <-
+  r_squared |>
+  summarise(r_squared_sd = sd(r.squared)) |>
+  pull(r_squared_sd)
+
+r_squared_mean <-
+  r_squared |>
+  summarise(r_squared_mean = mean(r.squared)) |>
+  pull(r_squared_mean)
+
+r_squared |>
+  ggplot(aes(x = r.squared)) + geom_density()+
+  labs(title = "Distribution of R-squared")
+```
+
+The density curve of R-Squared $\hat r^2$ is skewed to the left. The mean is `r round(r_squared_mean,4)` and standard deviation is`r round(r_squared_sd,4)`.
 
 
+Density plot of the product of beta estimates
+
+```{r}
+  beta_sd <- 
+  log_betas |>
+  summarise(beta_sd = sd(as.numeric(log_betas),na.rm = TRUE)) |>
+  pull(beta_sd)
+
+  betas_mean <- 
+  log_betas |>
+  summarise(betas_mean = mean(as.numeric(log_betas), na.rm = TRUE)) |>
+  pull(betas_mean)
+
+log_betas |>
+  ggplot(aes(x = log_betas)) + geom_density() +
+  labs(title = "Distribution of log(Beta1 * Beta2)")
+```
+
+The density curve of the the product of two beta estimates is left-skewed. The mean is `r round(betas_mean,4)`, and the standard deviation is `r round(beta_sd,4)`.
+
+
+95% CI of the R-Squared
+```{r}
+CI_interval <-
+  r_squared |>
+  summarize(ci_lower = quantile(r.squared, 0.025),
+            ci_upper = quantile(r.squared, 0.975)) 
+
+CI_result_lower <- CI_interval |> pull(ci_lower)
+CI_result_upper <- CI_interval |> pull(ci_upper)
+```
+
+The 95% Confidence Interval of the R-squared estimates $\hat r^2$ is (`r round(CI_result_lower,4)`,`r round(CI_result_upper,4)`).
+
+
+95% CI of log of the product of beta estimates
+```{r}
+CI_interval2 <-
+  log_betas |>
+  summarize(ci_lower = quantile(log_betas, 0.025, na.rm = TRUE),
+            ci_upper = quantile(log_betas, 0.975, na.rm = TRUE))
+
+CI_result_lower2 <- CI_interval2 |> pull(ci_lower)
+CI_result_upper2 <- CI_interval2 |> pull(ci_upper)
+```
+
+The 95% Confidence Interval of the product of beta estimates $\log(\hat\beta_1\times \hat\beta_2)$ is (`r round(CI_result_lower2,4)`,`r round(CI_result_upper2,4)`).
+
+
+### Problem 3
 
 
 
