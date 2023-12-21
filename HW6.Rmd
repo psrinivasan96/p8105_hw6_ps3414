@@ -271,17 +271,54 @@ The 95% Confidence Interval of the product of beta estimates $\log(\hat\beta_1\t
 
 ### Problem 3
 
+Importing and Cleaning the Data 
 
+```{r}
+birth_weight = read_csv("./data/birthweight.csv")
 
+birthweight_clean = birth_weight|>
+  mutate(mrace = as.factor(mrace))|>
+  mutate(malform = as.factor(malform))|>
+  mutate(babysex = as.factor(babysex))
 
+ birthweight_fit = birthweight_clean|>
+   mutate(mrace = case_match(mrace,
+                              "1" ~ "White",
+                              "2" ~ "Black",
+                              "3" ~ "Asian",
+                              "4" ~ "Puerto Rican"
+                          ))|>
+   mutate(malform = case_match(malform,
+                               "0" ~ "absent",
+                               "1" ~ "present"))
+```
 
+Proposed Regression Line
 
+The predictors I chose were: `fincome`, `malform`, `mrace`, and `smoken`. Income can act as a huge barrier and can influence the surroundings of those who are pregnant and the quality of nutrition. Additioanlly, this can also tell us the birth weight of the infant in which the mother's drug habits like cigarette smoking is tested. Other confounding variables were chosen such as race to see if these factors gave an affect on birth weight.
 
+```{r}
 
+fit_regression = lm(bwt ~ fincome + malform + mrace + smoken,
+           data = birthweight_fit)
+```
 
+Plot of Residuals Against Fitted Values
 
+```{r}
+birthweight_fit = birthweight_fit|>
+  add_residuals(fit_regression, var = "residuals")|>
+  add_predictions(fit_regression, var = "fitted")
 
+ggplot(birthweight_fit, aes(x= fitted, y = residuals))+
+  geom_point()+
+  geom_hline(yintercept = 0, linetype = "dashed", color = "blue") +
+  labs(title = "Residuals vs Fitted Values",
+       x = "Values",
+       y = "Residuals")
+```
 
+Observation: Most of the data points gathered around where the residual was 0. However, there are some outliers that should be takes note of because of the potential effects it might introduce to statistical analysis being conducted. Overall, there were not significant trends observed between the residuals and the values. 
 
 
 
